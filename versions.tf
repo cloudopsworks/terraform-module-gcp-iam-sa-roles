@@ -12,11 +12,11 @@ terraform {
   # Complete with required providers for the module
   required_providers {
     goolge = {
-      source  = "google"
+      source  = "hashicorp/google"
       version = "~> 7.0"
     }
     goolge-beta = {
-      source  = "google-beta"
+      source  = "hashicorp/google-beta"
       version = "~> 7.0"
     }
   }
