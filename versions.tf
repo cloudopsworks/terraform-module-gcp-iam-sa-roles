@@ -11,11 +11,11 @@ terraform {
   required_version = ">= 1.7"
   # Complete with required providers for the module
   required_providers {
-    goolge = {
+    google = {
       source  = "hashicorp/google"
       version = "~> 7.0"
     }
-    goolge-beta = {
+    google-beta = {
       source  = "hashicorp/google-beta"
       version = "~> 7.0"
     }

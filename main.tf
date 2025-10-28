@@ -54,15 +54,15 @@ resource "google_service_account_iam_binding" "sa_iam_binding" {
       }
     }
   ])
-  service_account_id = google_service_account.sa[each.sa_prefix].id
-  role               = each.binding.role
-  members            = each.binding.members
+  service_account_id = google_service_account.sa[each.value.sa_prefix].id
+  role               = each.value.binding.role
+  members            = each.value.binding.members
   dynamic "condition" {
-    for_each = length(try(each.binding.condition, {})) > 0 ? [1] : []
+    for_each = length(try(each.value.binding.condition, {})) > 0 ? [1] : []
     content {
-      title       = each.binding.condition.title
-      description = try(each.binding.condition.description, "")
-      expression  = each.binding.condition.expression
+      title       = each.value.binding.condition.title
+      description = try(each.value.binding.condition.description, "")
+      expression  = each.value.binding.condition.expression
     }
   }
 }
@@ -76,15 +76,15 @@ resource "google_service_account_iam_member" "sa_iam_member" {
       }
     }
   ])
-  service_account_id = google_service_account.sa[each.sa_prefix].id
-  member             = each.member.member
-  role               = each.member.role
+  service_account_id = google_service_account.sa[each.value.sa_prefix].id
+  member             = each.value.member.member
+  role               = each.value.member.role
   dynamic "condition" {
-    for_each = length(try(each.member.condition, {})) > 0 ? [1] : []
+    for_each = length(try(each.value.member.condition, {})) > 0 ? [1] : []
     content {
-      title       = each.member.condition.title
-      description = try(each.member.condition.description, "")
-      expression  = each.member.condition.expression
+      title       = each.value.member.condition.title
+      description = try(each.value.member.condition.description, "")
+      expression  = each.value.member.condition.expression
     }
   }
 }
