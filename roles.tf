@@ -14,7 +14,7 @@ locals {
 
 resource "google_project_iam_custom_role" "project_role" {
   for_each    = local.project_roles_map
-  role_id     = format("%s_%s", each.value.name_prefix, replace(local.system_name_short, "-", "_"))
+  role_id     = format("%s_%s", each.value.name_prefix, replace(local.sa_suffix, "-", "_"))
   title       = try(each.value.title, each.value.name_prefix)
   description = try(each.value.description, "Custom Role for ${each.value.name_prefix}")
   permissions = each.value.permissions

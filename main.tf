@@ -9,11 +9,12 @@
 
 locals {
   sa_map = { for sa in var.service_accounts : sa.name_prefix => sa }
+  sa_suffix = try(var.service_accounts.env_suffix, true) ? local.system_name_sub30 : local.system_name_env
 }
 
 resource "google_service_account" "sa" {
   for_each     = local.sa_map
-  account_id   = format("%s-%s", each.value.name_prefix, local.system_name_short)
+  account_id   = format("%s-%s", each.value.name_prefix, local.sa_suffix)
   display_name = try(each.value.display_name, each.value.name_prefix)
   description  = try(each.value.description, "Service Account for ${each.value.name_prefix}")
 }
