@@ -71,7 +71,7 @@ resource "google_service_account_iam_binding" "sa_iam_binding" {
 resource "google_service_account_iam_member" "sa_iam_member" {
   for_each = merge([
     for sa in local.sa_map : {
-      for member in try(sa.members, []) : "${sa.name_prefix}~${replace(member, ":", "~")}" => {
+      for member in try(sa.members, []) : "${sa.name_prefix}~${replace(member.member, ":", "~")}" => {
         sa_prefix = sa.name_prefix
         member    = member
       }
