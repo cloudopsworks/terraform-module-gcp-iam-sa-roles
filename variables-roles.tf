@@ -48,6 +48,13 @@ variable "roles" {
 #           title: "expirable access"
 #           description: "optional description"
 #           expression: request.time < timestamp("2020-01-01T00:00:00Z")
+#     roles:
+#       - role: roles/custom_role
+#         member: serviceAccount:custom_service_account@example....
+#         condition:
+#           title: "expirable access"
+#           description: "optional description"
+#           expression: request.time < timestamp("2020-01-01T00:00:00Z")
 variable "service_accounts" {
   description = "GCP Service Accounts to create"
   type        = any

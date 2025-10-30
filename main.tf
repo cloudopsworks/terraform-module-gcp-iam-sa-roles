@@ -8,7 +8,7 @@
 #
 
 locals {
-  sa_map = { for sa in var.service_accounts : sa.name_prefix => sa }
+  sa_map    = { for sa in var.service_accounts : sa.name_prefix => sa }
   sa_suffix = try(var.service_accounts.env_suffix, true) ? local.system_name_sub30 : local.system_name_env
 }
 
@@ -41,7 +41,10 @@ data "google_iam_policy" "sa_iam_policy" {
 }
 
 resource "google_service_account_iam_policy" "sa_iam_policy" {
-  for_each           = local.sa_map
+  for_each = {
+    for k, sa in local.sa_map : k => sa
+    if length(try(sa.policy, [])) > 0
+  }
   service_account_id = google_service_account.sa[each.key].id
   policy_data        = data.google_iam_policy.sa_iam_policy[each.key].policy_data
 }
@@ -54,7 +57,7 @@ resource "google_service_account_iam_binding" "sa_iam_binding" {
         binding   = binding
       }
     }
-  ])
+  ]...)
   service_account_id = google_service_account.sa[each.value.sa_prefix].id
   role               = each.value.binding.role
   members            = each.value.binding.members
@@ -76,7 +79,7 @@ resource "google_service_account_iam_member" "sa_iam_member" {
         member    = member
       }
     }
-  ])
+  ]...)
   service_account_id = google_service_account.sa[each.value.sa_prefix].id
   member             = each.value.member.member
   role               = each.value.member.role
@@ -86,6 +89,28 @@ resource "google_service_account_iam_member" "sa_iam_member" {
       title       = each.value.member.condition.title
       description = try(each.value.member.condition.description, "")
       expression  = each.value.member.condition.expression
+    }
+  }
+}
+
+resource "google_project_iam_member" "role_member" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.member, ":", "~")}" => {
+        sa_prefix = sa.name_prefix
+        role      = role
+      }
+    }
+  ]...)
+  project = data.google_project.current.project_id
+  role    = each.value.role.role
+  member  = each.value.role.member
+  dynamic "condition" {
+    for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.role.condition.title
+      description = try(each.value.role.condition.description, "")
+      expression  = each.value.role.condition.expression
     }
   }
 }

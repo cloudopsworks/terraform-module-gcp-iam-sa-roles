@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 TRONADOR_AUTO_INIT := true
 GITVERSION ?= $(INSTALL_PATH)/gitversion
-define PROVIDER_CHOMP
+define PROVIDER_CHOMP_AWS
 provider "aws" {
   alias = "default"
 }
