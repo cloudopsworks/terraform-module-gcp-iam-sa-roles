@@ -104,7 +104,7 @@ resource "google_project_iam_member" "role_member" {
   ]...)
   project = data.google_project.current.project_id
   role    = each.value.role.role
-   member  = google_service_account.sa[each.value.sa_prefix].member
+  member  = google_service_account.sa[each.value.sa_prefix].member
   dynamic "condition" {
     for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
     content {
