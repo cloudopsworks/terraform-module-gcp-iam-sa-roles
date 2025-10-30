@@ -96,7 +96,7 @@ resource "google_service_account_iam_member" "sa_iam_member" {
 resource "google_project_iam_member" "role_member" {
   for_each = merge([
     for sa in local.sa_map : {
-      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.member, ":", "~")}" => {
+      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.role, ":", "~")}" => {
         sa_prefix = sa.name_prefix
         role      = role
       }
