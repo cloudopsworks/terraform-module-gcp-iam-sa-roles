@@ -10,11 +10,14 @@
 locals {
   project_roles_map = { for role in var.roles : role.name_prefix => role if try(role.org, false) != true }
   org_roles_map     = { for role in var.roles : role.name_prefix => role if try(role.org, false) == true }
+  role_suffix = {
+    for role in var.roles : role.name_prefix => (try(role.env_suffix, false) ? local.system_name_env : local.sa_default_suffix)
+  }
 }
 
 resource "google_project_iam_custom_role" "project_role" {
   for_each    = local.project_roles_map
-  role_id     = format("%s_%s", each.value.name_prefix, replace(local.sa_suffix, "-", "_"))
+  role_id     = replace(format("%s_%s", each.value.name_prefix, local.role_suffix[each.key]), "-", "_")
   title       = try(each.value.title, each.value.name_prefix)
   description = try(each.value.description, "Custom Role for ${each.value.name_prefix}")
   permissions = each.value.permissions

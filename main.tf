@@ -8,13 +8,16 @@
 #
 
 locals {
-  sa_map    = { for sa in var.service_accounts : sa.name_prefix => sa }
-  sa_suffix = try(var.service_accounts.env_suffix, true) ? local.system_name_sub30 : local.system_name_env
+  sa_map            = { for sa in var.service_accounts : sa.name_prefix => sa }
+  sa_default_suffix = try(var.service_accounts.env_suffix, true) ? local.system_name_sub30 : local.system_name_env
+  sa_suffix = {
+    for sa in var.service_accounts : sa.name_prefix => (try(sa.env_suffix, false) ? local.system_name_env : local.sa_default_suffix)
+  }
 }
 
 resource "google_service_account" "sa" {
   for_each     = local.sa_map
-  account_id   = format("%s-%s", each.value.name_prefix, local.sa_suffix)
+  account_id   = format("%s-%s", each.value.name_prefix, local.sa_suffix[each.key])
   display_name = try(each.value.display_name, each.value.name_prefix)
   description  = try(each.value.description, "Service Account for ${each.value.name_prefix}")
 }
@@ -99,11 +102,33 @@ resource "google_project_iam_member" "role_member" {
       for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.role, ":", "~")}" => {
         sa_prefix = sa.name_prefix
         role      = role
-      }
+      } if try(role.role, "") != ""
     }
   ]...)
   project = data.google_project.current.project_id
   role    = each.value.role.role
+  member  = google_service_account.sa[each.value.sa_prefix].member
+  dynamic "condition" {
+    for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.role.condition.title
+      description = try(each.value.role.condition.description, "")
+      expression  = each.value.role.condition.expression
+    }
+  }
+}
+
+resource "google_project_iam_member" "role_member_ref" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.ref, ":", "~")}" => {
+        sa_prefix = sa.name_prefix
+        role      = role
+      } if try(role.ref, "") != ""
+    }
+  ]...)
+  project = data.google_project.current.project_id
+  role    = google_project_iam_custom_role.project_role[each.value.role.ref].id
   member  = google_service_account.sa[each.value.sa_prefix].member
   dynamic "condition" {
     for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
