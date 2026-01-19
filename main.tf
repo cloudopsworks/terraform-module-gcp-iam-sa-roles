@@ -7,3 +7,135 @@
 #     Distributed Under Apache v2.0 License
 #
 
+locals {
+  sa_map            = { for sa in var.service_accounts : sa.name_prefix => sa }
+  sa_default_suffix = try(var.service_accounts.env_suffix, true) ? local.system_name_sub30 : local.system_name_env
+  sa_suffix = {
+    for sa in var.service_accounts : sa.name_prefix => (try(sa.env_suffix, false) ? local.system_name_env : local.sa_default_suffix)
+  }
+}
+
+resource "google_service_account" "sa" {
+  for_each     = local.sa_map
+  account_id   = format("%s-%s", each.value.name_prefix, local.sa_suffix[each.key])
+  display_name = try(each.value.display_name, each.value.name_prefix)
+  description  = try(each.value.description, "Service Account for ${each.value.name_prefix}")
+}
+
+data "google_iam_policy" "sa_iam_policy" {
+  for_each = {
+    for k, sa in local.sa_map : k => sa if length(try(sa.policy, [])) > 0
+  }
+  dynamic "binding" {
+    for_each = try(each.value.policy, {})
+    content {
+      role    = binding.value.role
+      members = binding.value.members
+      dynamic "condition" {
+        for_each = length(try(binding.value.condition, {})) > 0 ? [1] : []
+        content {
+          title       = binding.value.condition.title
+          description = try(binding.value.condition.description, "")
+          expression  = binding.value.condition.expression
+        }
+      }
+    }
+  }
+}
+
+resource "google_service_account_iam_policy" "sa_iam_policy" {
+  for_each = {
+    for k, sa in local.sa_map : k => sa
+    if length(try(sa.policy, [])) > 0
+  }
+  service_account_id = google_service_account.sa[each.key].id
+  policy_data        = data.google_iam_policy.sa_iam_policy[each.key].policy_data
+}
+
+resource "google_service_account_iam_binding" "sa_iam_binding" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for binding in try(sa.bindings, []) : "${sa.name_prefix}~${binding.role}" => {
+        sa_prefix = sa.name_prefix
+        binding   = binding
+      }
+    }
+  ]...)
+  service_account_id = google_service_account.sa[each.value.sa_prefix].id
+  role               = each.value.binding.role
+  members            = each.value.binding.members
+  dynamic "condition" {
+    for_each = length(try(each.value.binding.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.binding.condition.title
+      description = try(each.value.binding.condition.description, "")
+      expression  = each.value.binding.condition.expression
+    }
+  }
+}
+
+resource "google_service_account_iam_member" "sa_iam_member" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for member in try(sa.members, []) : "${sa.name_prefix}~${replace(member.member, ":", "~")}" => {
+        sa_prefix = sa.name_prefix
+        member    = member
+      }
+    }
+  ]...)
+  service_account_id = google_service_account.sa[each.value.sa_prefix].id
+  member             = each.value.member.member
+  role               = each.value.member.role
+  dynamic "condition" {
+    for_each = length(try(each.value.member.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.member.condition.title
+      description = try(each.value.member.condition.description, "")
+      expression  = each.value.member.condition.expression
+    }
+  }
+}
+
+resource "google_project_iam_member" "role_member" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.role, ":", "~")}" => {
+        sa_prefix = sa.name_prefix
+        role      = role
+      } if try(role.role, "") != ""
+    }
+  ]...)
+  project = data.google_project.current.project_id
+  role    = each.value.role.role
+  member  = google_service_account.sa[each.value.sa_prefix].member
+  dynamic "condition" {
+    for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.role.condition.title
+      description = try(each.value.role.condition.description, "")
+      expression  = each.value.role.condition.expression
+    }
+  }
+}
+
+resource "google_project_iam_member" "role_member_ref" {
+  for_each = merge([
+    for sa in local.sa_map : {
+      for role in try(sa.roles, []) : "${sa.name_prefix}~${replace(role.ref, ":", "~")}" => {
+        sa_prefix = sa.name_prefix
+        role      = role
+      } if try(role.ref, "") != ""
+    }
+  ]...)
+  project = data.google_project.current.project_id
+  role    = google_project_iam_custom_role.project_role[each.value.role.ref].id
+  member  = google_service_account.sa[each.value.sa_prefix].member
+  dynamic "condition" {
+    for_each = length(try(each.value.role.condition, {})) > 0 ? [1] : []
+    content {
+      title       = each.value.role.condition.title
+      description = try(each.value.role.condition.description, "")
+      expression  = each.value.role.condition.expression
+    }
+  }
+}
