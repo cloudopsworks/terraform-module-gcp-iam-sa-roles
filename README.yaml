@@ -1,4 +1,4 @@
-name: Terraform Transit Gateway Module
+name: Terraform GCP IAM Service Account and Roles Module
 #logo: logo/logo.jpg
 
 license: "APACHE2"
@@ -8,23 +8,187 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-gcp-iam-sa-roles
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  Terraform module for managing Google Cloud Platform (GCP) IAM Service Accounts and Custom Roles with support for complex IAM bindings and conditions.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  This module provides a streamlined way to define and manage GCP Service Accounts and Custom Roles using a data-driven approach. It supports:
+  * Creation of Custom IAM Roles at project or organization level.
+  * Creation of Service Accounts with customizable display names and descriptions.
+  * Flexible IAM configuration for Service Accounts (Policies, Bindings, and Members).
+  * Project-level role assignments for created Service Accounts.
+  * Integration of IAM Conditions for all types of bindings.
 
 # How to use this project
-#usage: |-
+usage: |-
+  To use this module in a Terragrunt configuration, you can define your variables in a YAML file or directly in the `inputs` block.
+
+  ### Terragrunt Usage Example
+
+  ```hcl
+  terraform {
+    source = "github.com/cloudopsworks/terraform-module-gcp-iam-sa-roles.git?ref=v1.0.0"
+  }
+
+  inputs = {
+    org = {
+      organization_name = "my-org"
+      organization_unit = "engineering"
+      environment_type  = "production"
+      environment_name  = "prod"
+    }
+    spoke_def = "001"
+
+    roles = [
+      {
+        name_prefix = "app_runner"
+        title       = "App Runner Role"
+        permissions = [
+          "storage.objects.get",
+          "storage.objects.list"
+        ]
+      }
+    ]
+
+    service_accounts = [
+      {
+        name_prefix  = "app-sa"
+        display_name = "Application Service Account"
+        roles = [
+          {
+            ref = "app_runner"
+          },
+          {
+            role = "roles/logging.logWriter"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+  ### Variables Documentation
+
+  #### `org` (Required)
+  Organization details used for naming and tagging.
+  ```yaml
+  org:
+    organization_name: "example"   # (Required) Organization name
+    organization_unit: "dev"       # (Required) Organizational unit
+    environment_type: "non-prod"  # (Required) Environment type (e.g., dev, staging)
+    environment_name: "dev"       # (Required) Environment name
+  ```
+
+  #### `roles` (Optional)
+  List of custom roles to create.
+  ```yaml
+  roles:
+    - name_prefix: "custom_role"            # (Required) The name prefix of the custom role.
+      title: "Service Account"             # (Optional) The title of the custom role. Default: name_prefix
+      description: "This is a role"        # (Optional) A description of the custom role. Default: "Custom Role for {name_prefix}"
+      org: false                           # (Optional) If true, create an organization-level role. Default: false
+      env_suffix: false                    # (Optional) If true, append environment suffix to the role ID. Default: false
+      permissions:                         # (Required) The list of permissions for the custom role.
+        - "iam.serviceAccounts.actAs"
+  ```
+
+  #### `service_accounts` (Optional)
+  List of service accounts to create and their IAM configurations.
+  ```yaml
+  service_accounts:
+    - name_prefix: "svc_account"           # (Required) The name prefix of the service account.
+      display_name: "Custom SA"            # (Optional) The display name of the service account. Default: name_prefix
+      description: "This is a SA"          # (Optional) A description of the service account. Default: "Service Account for {name_prefix}"
+      env_suffix: false                    # (Optional) If true, append environment suffix to the account ID. Default: false
+      policy:                              # (Optional) IAM Policy binding to apply to the service account (authoritative).
+        - role: roles/iam.serviceAccountUser # (Required) The role to bind.
+          members:                         # (Required) The list of members to bind the role to.
+            - user:xxxxxx@example.com
+          condition:                       # (Optional) IAM Condition for the binding.
+            title: "expirable access"      # (Required) The title of the condition.
+            description: "description"     # (Optional) A description for the condition.
+            expression: "..."              # (Required) The CEL expression for the condition.
+      bindings:                            # (Optional) IAM Binding to apply to the service account (authoritative for the role).
+        - role: roles/iam.serviceAccountUser # (Required) The role to bind.
+          members:                         # (Required) The list of members to bind the role to.
+            - user:xxxxxx@example.com
+          condition:                       # (Optional) IAM Condition for the binding.
+            title: "expirable access"      # (Required) The title of the condition.
+            description: "description"     # (Optional) A description for the condition.
+            expression: "..."              # (Required) The CEL expression for the condition.
+      members:                             # (Optional) IAM Member to apply to the service account (non-authoritative).
+        - member: user:xxxxxx@example.com  # (Required) The member to bind.
+          role: roles/iam.serviceAccountUser # (Required) The role to bind.
+          condition:                       # (Optional) IAM Condition for the member.
+            title: "expirable access"
+            description: "description"
+            expression: "..."
+      roles:                               # (Optional) Project-level IAM roles to assign to the service account.
+        - role: roles/viewer               # (Optional) The GCP role to assign. Either role or ref is required.
+          ref: "custom_role_prefix"        # (Optional) Reference to a custom role created in the 'roles' variable.
+          condition:                       # (Optional) IAM Condition for the project role assignment.
+            title: "expirable access"
+            description: "description"
+            expression: "..."
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  ### Complex Service Account with Custom Role
+
+  ```hcl
+  inputs = {
+    org = {
+      organization_name = "cloudopsworks"
+      organization_unit = "shared"
+      environment_type  = "prod"
+      environment_name  = "common"
+    }
+
+    roles = [
+      {
+        name_prefix = "kms_admin_custom"
+        title       = "KMS Admin Custom"
+        permissions = [
+          "cloudkms.cryptoKeys.get",
+          "cloudkms.cryptoKeys.list",
+          "cloudkms.cryptoKeys.update",
+          "cloudkms.cryptoKeys.useToEncrypt",
+          "cloudkms.cryptoKeys.useToDecrypt"
+        ]
+      }
+    ]
+
+    service_accounts = [
+      {
+        name_prefix  = "vault-kms"
+        display_name = "Vault KMS Service Account"
+        roles = [
+          {
+            ref = "kms_admin_custom"
+          }
+        ]
+        bindings = [
+          {
+            role = "roles/iam.serviceAccountTokenCreator"
+            members = ["group:devops@example.com"]
+          }
+        ]
+      }
+    ]
+  }
+  ```
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  1. Create a `terragrunt.hcl` file.
+  2. Configure the `source` to point to this module.
+  3. Provide the required `org` variable.
+  4. Define your `roles` and `service_accounts` in the `inputs` block.
+  5. Run `terragrunt apply`.
 
 include:
   - "docs/targets.md"
