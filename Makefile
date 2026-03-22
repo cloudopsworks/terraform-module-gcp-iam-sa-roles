@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -9,7 +9,7 @@
 SHELL := /bin/bash
 TRONADOR_AUTO_INIT := true
 GITVERSION ?= $(INSTALL_PATH)/gitversion
-PROVIDER ?= $(shell cat .github/.provider 2>/dev/null || echo "aws")
+PROVIDER ?= $(shell cat .cloudopsworks/.provider 2>/dev/null || echo "aws")
 define PROVIDER_CHOMP_AWS
 provider "aws" {
   alias = "default"
@@ -21,7 +21,7 @@ endef
 define PROVIDER_CHOMP_GCP
 provider "google" {
 }
-provider "google_beta" {
+provider "google-beta" {
 }
 endef
 define PROVIDER_CHOMP_AZURERM
@@ -81,18 +81,35 @@ tag:: tag_local
 
 ## Initialize the project for a specific cloud provider: AWS
 init/aws:
-	@echo -n "aws" > .github/.provider
-	@cp .cloudopsworks/aws/* .
-	@$(GIT) add .github/.provider *.tf
+	@echo -n "aws" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/aws/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
 
 ## Initialize the project for a specific cloud provider: GCP
 init/gcp:
-	@echo -n "gcp" > .github/.provider
-	@cp .cloudopsworks/gcp/* .
-	@$(GIT) add .github/.provider *.tf
+	@echo -n "gcp" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/gcp/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
 
 ## Initialize the project for a specific cloud provider: Azure RM
 init/azurerm:
-	@echo -n "azurerm" > .github/.provider
-	@cp .cloudopsworks/azurerm/* .
-	@$(GIT) add .github/.provider *.tf
+	@echo -n "azurerm" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/azurerm/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
+
+## Initialize the project for a specific cloud provider: MongoDB Atlas Provider
+init/mongodb:
+	@echo -n "mongodb" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/mongodb/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
+
+## Initialize the project for a specific cloud provider: Github Provider
+init/github:
+	@echo -n "github" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/github/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf

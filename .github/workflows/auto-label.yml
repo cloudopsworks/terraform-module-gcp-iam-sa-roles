@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -14,7 +14,7 @@ jobs:
   components:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@v5
+    - uses: actions/labeler@v6
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        configuration-path: '.github/auto-label.yml'
+        configuration-path: '.cloudopsworks/auto-label.yml'
