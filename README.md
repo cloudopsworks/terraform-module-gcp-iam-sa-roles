@@ -252,7 +252,7 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 7.8.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | ~> 7.0 |
 
 ## Modules
 
